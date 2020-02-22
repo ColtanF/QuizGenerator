@@ -121,7 +121,32 @@ def makeQuizzes(numQuizzes, numQuestions):
 
     print("%s quizzes successfully generated." % resp)
 
-capitals = parseCSV('capsFile.txt')
+# getDataFromFile():
+#   This function tries to parse data from a file that the user specifies. If the
+#   function is unsuccessful at parsing the user's specified file, the function
+#   instead parses in the default csv file.
+def getDataFromFile():
+    # I had trouble getting the optional pyip function parameters to work, so I
+    # implemented my own crude version of the mustExist and limit parameters by
+    # using a while loop.
+    data = {}
+    fileFound = False
+    i = 0
+    while (not fileFound and i < 3):
+        try:
+            userInp = pyip.inputFilepath("Enter the name of the CSV file to parse for the quiz data:\n", blank=True)
+            data = parseCSV(userInp)
+            fileFound = True
+        except FileNotFoundError:
+            print("File to parse not found. Please enter a different file. ")
+        i+=1
+    if (not fileFound):
+        print("\nCould not find file. Importing US state capitals file instead...\n")
+        data = parseCSV('capsFile.txt')
+    return data
+
+# Main program execution begins here
+capitals = getDataFromFile()
 
 # First, check the CLI arguments. If the user specified 'practice', let them
 # take a practice quiz.
@@ -138,3 +163,4 @@ else:
 
     print("How many questions in each quiz?")
     numOfQuestions = pyip.inputNum('',max=len(capitals))
+    makeQuizzes(resp, numOfQuestions)
