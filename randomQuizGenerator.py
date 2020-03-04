@@ -9,17 +9,26 @@ import time
 
 # parseCSV(filename):
 #   This function parses the first two items in each line of a csv into a dictionary,
-#   which is then returned.
+#   which is then returned, along with the CSV's header values.
 #
 #   filename: the name of the csv file to be parsed
 def parseCSV(filename):
     # This code could be modified to support more than state/capitals
     # Ideally, this code could be used for any kind of flashcard style questions
-    capitals = {}
-    capsFile = open(filename, 'r')
-    for line in capsFile.readlines():
-        capitals[line.split(',')[0]] = line.split(',')[1].strip()
-    return capitals
+    quizVals = {}
+    csvFile = open(filename, 'r')
+    keyVal = 'US State' # This is the default for the capsFile.txt
+    ansVal = 'US State Capital' # This is the default for the capsFile.txt
+    hasHeaders = pyip.inputYesNo('Does your CSV file have headers?\n')
+    if (hasHeaders == 'yes'):
+        headers = csvFile.readline()
+        headList = headers.split(',')
+        keyVal = headList[0]
+        ansVal = headList[1].strip()
+
+    for line in csvFile.readlines():
+        quizVals[line.split(',')[0]] = line.split(',')[1].strip()
+    return (quizVals, keyVal, ansVal)
 
 # getAnswers(it, states):
 #   This code will return a tuple of answerOptions and the correct answer for
@@ -42,14 +51,17 @@ def getAnswers(it, states):
 #   This function is called when the user just wants to take a quiz.
 #
 #   numQs: the number of questions for the user's quiz
-def takeQuiz(numQs):
+#   keyVal: the key value from the CSV's header
+#   ansVal: the answer value from the CSV's header
+def takeQuiz(numQs, keyVal, ansVal):
     states = list(capitals.keys())
     rightAns = 0
     random.shuffle(states)
+    print('\nFor each of the following %ss, select the corresponding %s.\n' % (keyVal, ansVal))
     for questionNum in range(numQs):
         # Get the right and wrong answers.
         answerOptions, correctAnswer = getAnswers(questionNum, states)
-        print('%s. What is the capital of %s?\n' % (questionNum+1, states[questionNum]))
+        print('%s. %s:\n' % (questionNum+1, states[questionNum]))
         for i in range(4):
             print('    %s. %s\n' % ('ABCD'[i], answerOptions[i]))
         userAns = pyip.inputMenu(['A', 'B', 'C', 'D'],prompt='')
@@ -83,33 +95,31 @@ def gradeQuiz(right,total):
 #
 #   numQuizzes: the number of quizzes the user wants generated
 #   numQuestions: the number of questions that will be on each quiz
-def makeQuizzes(numQuizzes, numQuestions):
+#   keyVal: the key value from the CSV's header
+#   ansVal: the answer value from the CSV's header
+def makeQuizzes(numQuizzes, numQuestions, keyVal, ansVal):
      # Generate 35 different quiz files.
     for quizNum in range(numQuizzes):
         # Create the quiz and answer key files
-        quizFile = open('capitalsquiz%s.txt' % (quizNum + 1), 'w')
-        answerKeyFile = open('capitalsquiz_answers%s.txt' % (quizNum + 1), 'w')
+        quizFile = open('generatedQuiz%s.txt' % (quizNum + 1), 'w')
+        answerKeyFile = open('generatedQuiz_answers%s.txt' % (quizNum + 1), 'w')
 
         # Write out the header for the quizNum
         quizFile.write('Name:\n\nDate:\n\nPeriod:\n\n')
-        quizFile.write((' ' * 20) + 'State Capitals Quiz (Form %s)' % (quizNum + 1))
+        quizFile.write((' ' * 30) + 'Quiz (Form %s)' % (quizNum + 1))
         quizFile.write('\n\n')
 
         # Shuffle the order of the states
         states = list(capitals.keys())
         random.shuffle(states)
-
+        quizFile.write('\nFor each of the following %ss, select the corresponding %s.\n\n' % (keyVal, ansVal))
         # Generate each question.
         for questionNum in range(numQuestions):
             # Get right and wrong answers.
             answerOptions, correctAnswer = getAnswers(questionNum, states)
 
             # Write the question and answer options to the quiz file
-            # TODO: Maybe allow the user to choose question format?
-            #       i.e. 'What is the capital of %s' could be replaced by
-            #       something like 'What is the ____ of %s' or
-            #       'What does _____ mean?'
-            quizFile.write('%s. What is the capital of %s?\n' % (questionNum+1, states[questionNum]))
+            quizFile.write('%s. %s:\n' % (questionNum+1, states[questionNum]))
             for i in range(4):
                 quizFile.write('    %s. %s\n' % ('ABCD'[i], answerOptions[i]))
             quizFile.write('\n')
@@ -129,7 +139,7 @@ def getDataFromFile():
     # I had trouble getting the optional pyip function parameters to work, so I
     # implemented my own crude version of the mustExist and limit parameters by
     # using a while loop.
-    data = {}
+    data = ()
     fileFound = False
     i = 0
     while (not fileFound and i < 3):
@@ -146,14 +156,14 @@ def getDataFromFile():
     return data
 
 # Main program execution begins here
-capitals = getDataFromFile()
+capitals, keyVal, ansVal = getDataFromFile()
 
 # First, check the CLI arguments. If the user specified 'practice', let them
 # take a practice quiz.
 if (len(sys.argv) >= 2 and sys.argv[1].lower() == 'practice'):
     print("How many questions for your quiz?")
     numOfQuestions = pyip.inputNum('',max=len(capitals))
-    takeQuiz(numOfQuestions)
+    takeQuiz(numOfQuestions, keyVal, ansVal)
 
 else:
     # The user just wants to generate the quizzes. Ask them how many quizzes, and
@@ -163,4 +173,4 @@ else:
 
     print("How many questions in each quiz?")
     numOfQuestions = pyip.inputNum('',max=len(capitals))
-    makeQuizzes(resp, numOfQuestions)
+    makeQuizzes(resp, numOfQuestions, keyVal, ansVal)
